@@ -1,0 +1,13 @@
+sources:
+  - name: bronze_airbnb
+    schema: bronze_airbnb
+
+    tables:
+      - name: hosts
+        identifier: src_hosts
+        
+      - name: listings
+        identifier: src_listings
+        
+      - name: reviews
+        identifier: src_reviews
