@@ -1,0 +1,152 @@
+High level steps we did today:
+
+1 - Add materialized = table
+    
+models:
+  	dbt_learn_proj:
+    		silver_airbnb:
+      			+schema: 'silver_airbnb'
+      			+materialized: table
+
+table will get created
+
+---------------------------------------
+For transient:
+
+show tables like 'stg_listings' in schema dev.silver_airbnb
+
+models:
+  dbt_learn_proj_practice:
+    silver_airbnb:
+      +schema: 'silver_airbnb'
+      +materialized: table
+      +transient: false
+
+
+--------------------------------------
+if you want to create iceberg tables:
+
+flags:
+  enable_iceberg_materializations: True
+
+
+models:
+  dbt_learn_proj_practice:
+    silver_airbnb:
+      +schema: 'silver_airbnb'
+      +materialized: table
+      +table_format: 'iceberg'
+      +external_volume: "s3_iceberg_snow"
+----------------------------------------------------------------
+https://docs.getdbt.com/blog/announcing-materialized-views
+
+models:
+  dbt_learn_proj_practice:
+    silver_airbnb:
+      +schema: 'silver_airbnb'
+      +materialized: dynamic_table
+      +target_lag: downstream
+      +snowflake_warehouse: compute_wh
+
+
+-------------------------------------------------------------------------------------------------
+Add clean targets
+
+clean-targets:         # directories to be removed by `dbt clean`
+  - "target"
+  - "dbt_packages"
+
+--------------------------------------------------------------------------------------------------
+
+Now we will configure the gold layer:
+
+---config project.yml also
+
+gold_airbnb:
+      +schema: 'gold_airbnb'
+
+
+---1
+SELECT 
+  listing_id,
+  listing_name,
+  room_type,
+  CASE WHEN minimum_nights = 0 THEN 1  ELSE minimum_nights END AS minimum_nights,
+  host_id,
+  REPLACE( price_str, '$') :: NUMBER(10,2) AS price,
+  created_at,
+  updated_at
+FROM
+  DEV.silver_airbnb.stg_listings
+
+--2
+SELECT
+    host_id,
+    NVL( host_name, 'Anonymous') AS host_name,
+    is_superhost,
+    created_at,
+    updated_at
+FROM DEV.silver_airbnb.stg_hosts
+
+--3
+SELECT 
+    l.listing_id,
+    l.listing_name,
+    l.room_type,
+    l.minimum_nights,
+    l.price,
+    l.host_id,
+    h.host_name,
+    h.is_superhost as host_is_superhost,
+    l.created_at,
+    GREATEST(l.updated_at, h.updated_at) as updated_at
+FROM DEV.gold_airbnb.dim_listings l
+LEFT JOIN DEV.gold_airbnb.dim_hosts h ON (h.host_id = l.host_id)
+
+
+NOW SEE THE MAGIC OF REF KEYWORD by replacing with REF
+
+{{ ref('stg_hosts')}}
+{{ ref('dim_listings')}} 
+{{ref('dim_hosts')}}
+{{ref('stg_listings')}}
+
+
+-----------------------------------------------------now about the SOURCE KEYWORD-------------------
+
+1 - Inside models create one folder "sources"
+2 -  then create a new file source.yml
+3 - confirgured sources:
+
+
+sources: (sources.yml also present in repo)
+
+  - name: bronze_airbnb
+    schema: bronze_airbnb
+
+    tables:
+      - name: hosts
+        identifier: src_hosts
+        
+      - name: listings
+        identifier: src_listings
+        
+      - name: reviews
+        identifier: src_reviews
+     
+
+
+
+Change the models to
+1 - {{source('bronze_airbnb','hosts')}}
+2 - {{source('bronze_airbnb','reviews')}}
+3 - {{source('bronze_airbnb','listings')}}
+
+
+--------------------------------------------------------
+
+
+dbt docs generate
+dbt docs serve
+
+
