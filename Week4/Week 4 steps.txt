@@ -1,0 +1,36 @@
+create snapshot - hosts_snapshots
+
+edit dim_listings and dim_hosts and add snapshot conditions
+
+
+create folder platinum_airbnb
+full_moon_reviews.sql
+and full_moon_no_sleep.sql
+
+
+dbt docs generate & dbt docs show
+
+
+----------------------------------------------------------------
+
+Tests
+
+2 types of test 
+singular & generic tests.
+
+
+Go to 6_DBT_Test
+
+
+7_Macros_custom_generic test
+
+1 - create CUSTOM GENERIC TESTS - {% test positive_value(model, column_name) %}
+
+2 - {% macro generate_hash_key_args(args) %}
+
+
+8 - fact_reviews
+
+9 - variables
+
+
