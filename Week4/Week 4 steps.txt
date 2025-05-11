@@ -10,6 +10,8 @@ and full_moon_no_sleep.sql
 
 dbt docs generate & dbt docs show
 
+bronze ->  silver ->      gold ->
+bronze ->  snapshot ->    gold -> platinum
 
 ----------------------------------------------------------------
 
@@ -32,5 +34,12 @@ Go to 6_DBT_Test
 8 - fact_reviews
 
 9 - variables
+
+
+generic :
+
+=> abc.sql
+
+
 
 

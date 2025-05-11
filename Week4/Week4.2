@@ -1,0 +1,96 @@
+1) tests> genetic> string_not_empty.sql
+
+------------
+{% test string_not_empty(model,column_name) %}
+	select {{column_name}}
+	from {{model}}
+	where TRIM({{column_name}}) = ''
+{% endtest %}
+
+------------------------
+
+- name: dim_hosts
+    description: this is dim dim_hosts
+    columns:
+      - name: host_name
+        tests:
+          - string_not_empty
+-----------------------------------
+
+2) percentage_listings_above_threshold.sql
+
+select * from (
+SELECT 
+    (COUNT(CASE WHEN price > 135 THEN 1 END) * 100.0) / COUNT(*) AS percentage_listings_above_threshold
+FROM 
+      gold_airbnb.dim_listings
+      ) where percentage_listings_above_threshold> 8.0
+
+
+{{ config(severity = 'warn') }}
+
+https://docs.getdbt.com/reference/resource-configs/severity
+
+
+  - name: dim_hosts
+    description: this is dim dim_hosts
+    columns:
+      - name: host_name
+        tests:
+          - string_not_empty:
+              config:
+                  severity: error
+                  error_if: ">6"
+                  warn_if: ">=1"
+-------------------------------
+3)Hooks - https://docs.getdbt.com/docs/build/hooks-operations
+
+
+create table dev.audit.AUDIT_LOG( INVOCATION_ID VARCHAR(255), MODEL_NAME VARCHAR(255),
+    STATUS VARCHAR(255), START_TIME TIMESTAMP, END_TIME TIMESTAMP,USER_NAME VARCHAR(255));
+
+ select * from  dev.audit.AUDIT_LOG
+
+    
+      +pre-hook:
+        - "INSERT INTO AUDIT.AUDIT_LOG (INVOCATION_ID,MODEL_NAME,STATUS,START_TIME,END_TIME,USER_NAME) VALUES ('{{ invocation_id }}','{{ this.name }}','STARTED',CURRENT_TIMESTAMP,NULL,'{{ target.user }}')"
+      +post-hook:
+        - "INSERT INTO AUDIT.AUDIT_LOG (INVOCATION_ID,MODEL_NAME,STATUS,START_TIME,END_TIME,USER_NAME) VALUES ('{{ invocation_id }}','{{ this.name }}','COMPLETED',NULL,CURRENT_TIMESTAMP,'{{ target.user }}')"
+  on-run-start:
+    - "INSERT INTO AUDIT.AUDIT_LOG (INVOCATION_ID,MODEL_NAME,STATUS,START_TIME,END_TIME,USER_NAME) VALUES ('{{ invocation_id }}','ON-RUN-START','STARTED',CURRENT_TIMESTAMP,NULL,'{{ target.user }}')"
+  on-run-end:
+    - "INSERT INTO AUDIT.AUDIT_LOG (INVOCATION_ID,MODEL_NAME,STATUS,START_TIME,END_TIME,USER_NAME) VALUES ('{{ invocation_id }}','ON-RUN-END','COMPLETED',NULL,CURRENT_TIMESTAMP,'{{ target.user }}')"	
+
+
+--------------------------------------------------------------------------------------------------
+--4 log and variables
+open file 9_
+
+
+--5 Source freshenss
+sources:
+  - name: bronze_airbnb
+    schema: bronze_airbnb
+
+    tables:
+      - name: hosts
+        identifier: src_hosts
+        freshness:
+          warn_after: { count: 12, period: hour }
+          error_after: { count: 24, period: hour }
+        loaded_at_field: updated_at   # column used to check freshness
+        
+      - name: listings
+        identifier: src_listings
+        
+      - name: reviews
+        identifier: src_reviews
+
+
+
+
+select * from DEV.BRONZE_AIRBNB.SRC_HOSTS where id = 17391
+
+select current_timestamp
+
+update DEV.BRONZE_AIRBNB.SRC_HOSTS set updated_at = DATEADD('hour', -5, current_timestamp) where id = 17391
